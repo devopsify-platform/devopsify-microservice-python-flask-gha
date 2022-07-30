@@ -110,7 +110,7 @@ def notifyTeam(String buildStatus = 'STARTED') {
   }
 
   // SEND MESSAGE TO SLACK CHANNEL
-  sh "curl -X POST --data-urlencode 'payload={\"channel\": \"#alerts\", \"username\": \"webhookbot\", \"icon_emoji\": \":ghost:\", \"text\": \"This is posted to #alerts and comes from a bot named webhookbot.\"}' https://hooks.slack.com/services/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"
+  sh "curl -X POST --data-urlencode 'payload={\"channel\": \"#alerts\", \"username\": \"webhookbot\", \"icon_emoji\": \":ghost:\", \"text\": \"This is posted to #alerts and comes from a bot named webhookbot.\"}' https://hooks.slack.com/services/<hook-here>"
   //slackSend (color: colorCode, message: summary);
 
 }
