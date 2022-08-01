@@ -1,0 +1,65 @@
+name: release
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  APP_NAME: REPLACE_APP_NAME
+  MSVC_NAME: REPLACE_MSVC_NAME
+  IMAGE_REPO_NAME: REPLACE_IMAGE_REPO_NAME
+  CONFIG_REPO_NAME: REPLACE_CONFIG_REPO_NAME
+
+jobs:
+
+  docker-build-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      
+      - name: Set Environment variables
+        run: |
+          cat >> $GITHUB_ENV << EOF
+          VERSION=${GITHUB_REF##*/}
+          EOF
+      
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v1
+      
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - name: Docker Build and Push
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ${{ env.IMAGE_REPO_NAME }}:latest,${{ env.IMAGE_REPO_NAME }}:${{ env.VERSION }}
+      
+      - name: Promote To Dev Environment
+        run: |
+          echo "promoting into dev environment!"
+          git config --global user.email devopsify-bot@onekloud.io && git config --global user.name devopsify-bot
+          echo "cloning config repo $CONFIG_REPO_NAME"
+          git clone https://oauth2:${{ secrets.GH_PAT }}@github.com/$APP_NAME/$CONFIG_REPO_NAME
+          cd $CONFIG_REPO_NAME
+          echo "checking out main branch"
+          git checkout main
+          echo "updating image tag: in Values.yaml file"
+          sed -i "s,tag:.*,tag:\ ${{ env.VERSION }}," charts/$MSVC_NAME/values.yaml
+          echo "updating version: in Chart.yaml file"
+          sed -i "s,version:.*,version:\ ${{ env.VERSION }}," charts/$MSVC_NAME/Chart.yaml
+          echo "updating appVersion: in Chart.yaml file"
+          sed -i "s,appVersion:.*,appVersion:\ ${{ env.VERSION }}," charts/$MSVC_NAME/Chart.yaml
+          git add . && git commit -m "updated image tag"
+          git push
