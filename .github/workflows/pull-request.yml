@@ -1,0 +1,37 @@
+name: pull-request
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # BUILD
+  build-test:
+    strategy:
+      matrix:
+        python-version: [3.6.15]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      
+      - name: Switch to Current Branch
+        run: git checkout ${{ env.BRANCH }}
+      
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - name: Install dependencies
+        working-directory: ./app
+        run: |
+          python -m pip install --upgrade pip
+          pip install --trusted-host pypi.python.org -r requirements.txt
+      
+      - name: Run Unit Tests
+        run: pytest -v
+  
