@@ -2,7 +2,7 @@ flask==1.0.2
 Flask-RESTful==0.3.6
 Flask-Cors==2.1.0
 pytest==3.10.0
-pytest-flask==0.14.0
+pytest-flask==0.15.1
 gunicorn==19.9.0
 json-logging==0.0.9
 prometheus_client==0.4.2
