@@ -12,35 +12,40 @@ on:
         - REPLACE_APP_NAME-helm-charts-prod
 
 env:
-  APP_NAME: REPLACE_APP_NAME
-  MSVC_NAME: REPLACE_MSVC_NAME
+  APP_NAME: poteapp
+  MSVC_NAME: poteapp-accounts
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-
-      - name: Getting Last Release Tag
-        id: releases
-        uses: pozetroninc/github-action-get-latest-release@master
+      
+      - name: Checkout
+        uses: actions/checkout@v2
         with:
-          repository: "${{ env.APP_NAME }}/${{ env.MSVC_NAME }}"
-          excludes: "prerelease, draft"
+          fetch-depth: 0
+      
+      - name: Switch to Current Branch
+        run: git checkout ${{ env.BRANCH }}
+  
+      - name: Get Latest Tag
+        id: semantic_version
+        run: echo "::set-output name=svtag::$(git tag --sort=committerdate | tail -1)"
       
       - run: |
-          echo "promoting into ${{ github.events.inputs.environment }} environment!"
+          echo "promoting into ${{ github.event.inputs.environment }} environment!"
           git config --global user.email devopsify-bot@onekloud.io && git config --global user.name devopsify-bot
-          echo "cloning config repo ${{ github.events.inputs.environment }}"
-          git clone https://oauth2:${{ secrets.GH_PAT }}@github.com/$APP_NAME/${{ github.events.inputs.environment }}
-          cd ${{ github.events.inputs.environment }}
+          echo "cloning config repo ${{ github.event.inputs.environment }}"
+          git clone https://oauth2:${{ secrets.GH_PAT }}@github.com/$APP_NAME/${{ github.event.inputs.environment }}
+          cd ${{ github.event.inputs.environment }}
           echo "checking out main branch"
           git checkout main
           echo "updating image tag: in Values.yaml file"
-          sed -i "s,tag:.*,tag:\ ${{ steps.releases.outputs.release }}," charts/$MSVC_NAME/values.yaml
+          sed -i "s,tag:.*,tag:\ ${{ steps.semantic_version.outputs.svtag }}," charts/$MSVC_NAME/values.yaml
           echo "updating version: in Chart.yaml file"
-          sed -i "s,version:.*,version:\ ${{ steps.releases.outputs.release }}," charts/$MSVC_NAME/Chart.yaml
+          sed -i "s,version:.*,version:\ ${{ steps.semantic_version.outputs.svtag }}," charts/$MSVC_NAME/Chart.yaml
           echo "updating appVersion: in Chart.yaml file"
-          sed -i "s,appVersion:.*,appVersion:\ ${{ steps.releases.outputs.release }}," charts/$MSVC_NAME/Chart.yaml
+          sed -i "s,appVersion:.*,appVersion:\ ${{ steps.semantic_version.outputs.svtag }}," charts/$MSVC_NAME/Chart.yaml
           git add . && git commit -m "updated image tag"
           git push

@@ -80,21 +80,29 @@ jobs:
           context:
           file: Dockerfile
           push: true
-          tags: ${{ env.IMAGE_REPO_NAME }}:latest,${{ env.IMAGE_REPO_NAME }}:dev-${{ steps.shortsha.outputs.shar_short }}
+          tags: ${{ env.IMAGE_REPO_NAME }}:dev-${{ steps.shortsha.outputs.sha_short }}
       
       - name: Create Pre-Release
         uses: "marvinpinto/action-automatic-releases@latest"
         with:
-          repo_token: "${{ secret.GH_PAT }}"
+          repo_token: "${{ secrets.GH_PAT }}"
           automatic_release_tag: "latest"
           prerelease: true
           title: "Development Build"
 
   promote-to-dev-environment:
     runs-on: ubuntu-latest
-    needs: docker-build-push
+    needs: docker-build-test
 
     steps:
+
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      
+      - name: Switch to Current Branch
+        run: git checkout ${{ env.BRANCH }}
   
       - name: Get short sha
         id: shortsha
@@ -109,10 +117,6 @@ jobs:
           echo "checking out main branch"
           git checkout main
           echo "updating image tag: in Values.yaml file"
-          sed -i "s,tag:.*,tag:\ dev-${{ steps.shortsha.outputs.shar_short }}," charts/$MSVC_NAME/values.yaml
-          echo "updating version: in Chart.yaml file"
-          sed -i "s,version:.*,version:\ dev-${{ steps.shortsha.outputs.shar_short }}," charts/$MSVC_NAME/Chart.yaml
-          echo "updating appVersion: in Chart.yaml file"
-          sed -i "s,appVersion:.*,appVersion:\ dev-${{ steps.shortsha.outputs.shar_short }}," charts/$MSVC_NAME/Chart.yaml
+          sed -i "s,tag:.*,tag:\ dev-${{ steps.shortsha.outputs.sha_short }}," charts/$MSVC_NAME/values.yaml
           git add . && git commit -m "updated image tag"
           git push

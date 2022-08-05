@@ -64,7 +64,7 @@ jobs:
         id: semver
         uses: "marvinpinto/action-automatic-releases@latest"
         with:
-          repo_token: "${{ secret.GH_PAT }}"
+          repo_token: "${{ secrets.GH_PAT }}"
           prerelease: false
       
       - name: Setup QEMU
@@ -89,7 +89,7 @@ jobs:
 
   promote-to-dev-environment:
     runs-on: ubuntu-latest
-    needs: docker-build-push
+    needs: docker-build-test
 
     steps:
       - run: |
@@ -101,10 +101,10 @@ jobs:
           echo "checking out main branch"
           git checkout main
           echo "updating image tag: in Values.yaml file"
-          sed -i "s,tag:.*,tag:\ ${{ needs.docker-build-push.outputs.semvertag }}," charts/$MSVC_NAME/values.yaml
+          sed -i "s,tag:.*,tag:\ ${{ needs.docker-build-test.outputs.semvertag }}," charts/$MSVC_NAME/values.yaml
           echo "updating version: in Chart.yaml file"
-          sed -i "s,version:.*,version:\ ${{ needs.docker-build-push.outputs.semvertag }}," charts/$MSVC_NAME/Chart.yaml
+          sed -i "s,version:.*,version:\ ${{ needs.docker-build-test.outputs.semvertag }}," charts/$MSVC_NAME/Chart.yaml
           echo "updating appVersion: in Chart.yaml file"
-          sed -i "s,appVersion:.*,appVersion:\ ${{ needs.docker-build-push.outputs.semvertag }}," charts/$MSVC_NAME/Chart.yaml
+          sed -i "s,appVersion:.*,appVersion:\ ${{ needs.docker-build-test.outputs.semvertag }}," charts/$MSVC_NAME/Chart.yaml
           git add . && git commit -m "updated image tag"
           git push
