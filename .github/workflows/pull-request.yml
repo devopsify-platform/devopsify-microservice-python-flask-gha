@@ -1,4 +1,5 @@
-name: pull-request
+---
+name: "pull-request"
 
 on:
   pull_request:

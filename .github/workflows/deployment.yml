@@ -1,0 +1,46 @@
+---
+name: "deployment"
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        description: Select Environment
+        options:
+        - REPLACE_APP_NAME-helm-charts-stage
+        - REPLACE_APP_NAME-helm-charts-prod
+
+env:
+  APP_NAME: REPLACE_ME_APP_NAME
+  MSVC_NAME: REPLACE_ME_MSVC_NAME
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Getting Last Release Tag
+        id: releases
+        uses: pozetroninc/github-action-get-latest-release@master
+        with:
+          repository: "${{ env.APP_NAME }}/${{ env.MSVC_NAME }}"
+          excludes: "prerelease, draft"
+      
+      - run: |
+          echo "promoting into ${{ github.events.inputs.environment }} environment!"
+          git config --global user.email devopsify-bot@onekloud.io && git config --global user.name devopsify-bot
+          echo "cloning config repo ${{ github.events.inputs.environment }}"
+          git clone https://oauth2:${{ secrets.GH_PAT }}@github.com/$APP_NAME/${{ github.events.inputs.environment }}
+          cd ${{ github.events.inputs.environment }}
+          echo "checking out main branch"
+          git checkout main
+          echo "updating image tag: in Values.yaml file"
+          sed -i "s,tag:.*,tag:\ ${{ steps.releases.outputs.release }}," charts/$MSVC_NAME/values.yaml
+          echo "updating version: in Chart.yaml file"
+          sed -i "s,version:.*,version:\ ${{ steps.releases.outputs.release }}," charts/$MSVC_NAME/Chart.yaml
+          echo "updating appVersion: in Chart.yaml file"
+          sed -i "s,appVersion:.*,appVersion:\ ${{ steps.releases.outputs.release }}," charts/$MSVC_NAME/Chart.yaml
+          git add . && git commit -m "updated image tag"
+          git push
