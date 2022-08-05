@@ -12,8 +12,8 @@ on:
         - REPLACE_APP_NAME-helm-charts-prod
 
 env:
-  APP_NAME: REPLACE_ME_APP_NAME
-  MSVC_NAME: REPLACE_ME_MSVC_NAME
+  APP_NAME: REPLACE_APP_NAME
+  MSVC_NAME: REPLACE_MSVC_NAME
 
 jobs:
   deploy:
