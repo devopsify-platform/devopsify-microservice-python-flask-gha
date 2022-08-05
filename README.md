@@ -9,25 +9,71 @@
   - GH_PAT : Github User PAT
 - Clone this repository
 
+### Environments
+This project supports the following 3 environments
+- developement
+- staging
+- production
+The development environment either points to a docker image tag of dev-short_sha or semantic version tag. Which every is most recent.
+The staging and production environments always point to the most recent tagged release. Docker images tagged latest always point to
+the last tagged release.
+
+### Conventional Commits
+[Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) are encouraged as they provide an easy set of rules
+for creating an explicit commit history which can then be used by automated tools to generate a detailed changelog for this
+project. The commit message should be structured as follows:
+- <type>[optional scope]: <description>
+- [optional body]
+- [optional footer(s)]
+
+Here's some example pr titles:
+- BREAKING CHANGE: (Major version bump) vX.Y.Y
+- feat: (Minor version bump) vY.X.Y
+- fix: (Patch version bump) vY.Y.X
+
 ### Semantic Versioning
 [SemVer](https://semver.org/)
 vMajor.Minor.Patch
-This project uses Semantic Versioning to denote version number
-and begins with an intial version of v0.0.0
-The semantic version of the project can be incremented by using the following 
-[Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) in the title of your pr
-- BREAKING CHANGE: (Major version bump)
-- feat: (Minor version bump)
-- (Patch version bump automatically on all other pr titles.)
+This project uses Semantic Versioning to denote version number and begins with an intial version of v0.0.0.
+The semantic version of the project can be incremented by creating a tag and pushing it main.
+- Get most recent tag: git tag --sort=committerdate | tail -1
+- Create tag: git tag v0.1.0
+- Push tag: git push origin v0.1.0
 
-### Release-Cycle: Pull Request --> Merge to main --> Pre-Release --> Deploy To Dev Env --> Release --> Deploy to Dev Env
-Background: This project comes with the following Github Actions
+### Build Test Release-Cycle:
+Background: This project comes with Github Actions implementing the following release cycle in the following order:
 - pull-request
-- ci
-- release
-pull-request: Runs on every commit to a pull request on the main branch. Executes unit and other tests.
-ci: Runs on every push to main. In addition to above builds and pushes container image to dockerhub, creates a pre-release, and updates helm manifest for deployment containing the pre-release tags
-release: runs on creation of a release starting with tag v*
+- merge-to-main
+- pre-release
+- deploy-to-dev
+- tagged-release
+- deploy-to-staging
+- deploy-to-prod
+
+#### pull-request
+Runs on every commit to a pull request on the main branch. 
+- Executes unit and other tests.
+
+#### pre-release
+Runs on every merge to main.
+- Executes unit and other tests.
+- Builds Docker image
+- Tags Image with short sha from this commit
+- Pushes docker image to dockerhub
+- Creates a pre-release tagged latest
+- Deploys docker image to dev by updating dev helm repo associated with this project
+
+#### tagged-release
+Runs on every tag push to main with the pattern v*
+- Executes unit and other tests.
+- Builds Docker image
+- Tags Image with pushed tag
+- Pushes docker image to dockerhub with this tag and latest
+- Deploys docker tagged image to dev by updating dev helm repo associated with this project
+
+#### deploy to staging / production
+Runs via workflow dispatch after selecting target environment
+- Deploys docker tagged image to env by updating env helm repo associated with this project
 
 ### Minor Version Bump Example
 Assuming starting version tag v0.0.0
@@ -38,34 +84,26 @@ Assuming starting version tag v0.0.0
 - Pull request runs unit tests on this and subsequent commits
 
 ### Pre-release and deloy to dev environment
-CI workflow runs on merges to main.
-- merge pr to main
-- Re-runs unit tests
-- bumps semantic version number to v0.1.0-prerelease(number)
-- builds docker image
-- tags docker image as v0.1.0-prerelease(number)
-- pushes docker image to dockerhub
-- creates a pre-release in this project with same tag v0.1.0-prerelease(number)
-- updates related helm repository Chart.yaml/values.yaml with tag v0.1.0-prerelease(number)
+pre-release workflow runs on merges to main.
+- Executes unit and other tests.
+- Builds Docker image
+- Tags Image with short sha from this commit
+- Pushes docker image to dockerhub
+- Creates a pre-release tagged latest
+- Deploys docker image to dev by updating dev helm repo associated with this project
 - If helm repo is watched by [ArgoCD](https://argo-cd.readthedocs.io/en/stable/) app is updated on k8s cluster
 
 ### Release and deploy to dev environment
-Release workflow runs on creation of a release in Github UI
-- Select actions tab
-- From the list of workflows select ci
-- Select most recent successfull workflow run
-- Select docker-build-push
-- Expand Semantic Versioning task
-- Select url to create a new relese
-- Update release title to match tag name
-- Include release description
-- Publish release
-- Release workflow activates
-- builds and tags docker image with tag v0.1.0
-- Pushes Image to docker hub as imageName:v0.1.0
-- Creates a v0.1.0 release in this project
-- Updates releated helm repository Chart.yaml/values.yaml with tag v0.1.0
+Runs on every tag push to main with the pattern v*
+- git tag v0.1.0
+- git push origin v0.1.0
+- Executes unit and other tests.
+- Builds Docker image
+- Tags Image with pushed tag
+- Pushes docker image to dockerhub with this tag and latest
+- Deploys docker tagged image to dev by updating dev helm repo associated with this project
 - If helm repo is watched by [ArgoCD](https://argo-cd.readthedocs.io/en/stable/) app is updated on k8s cluster
-- enjoy!
 
-
+### Deploy to staging / production
+Runs via workflow dispatch after selecting target environment
+- Deploys docker tagged image to env by updating env helm repo associated with this project
